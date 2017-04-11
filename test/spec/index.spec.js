@@ -1,12 +1,14 @@
 "use strict";
 
-//Library is restricted to work in production node environment
-process.env.NODE_ENV = "production";
-
 const chai = require("chai");
 const expect = chai.expect;
-const reactComponentCache = require("../..");
 const intercept = require("intercept-stdout");
+
+const requireCache = function (env = "production") {
+  process.env.NODE_ENV = env;
+
+  return require("../..");
+}
 
 const clearRequireCache = function () {
   Object.keys(require.cache).forEach(
@@ -17,12 +19,18 @@ const clearRequireCache = function () {
 };
 
 describe("react-component-cache", function () {
+  afterEach(() => {
+    clearRequireCache();
+  });
+
   it("should be loaded", () => {
+    const reactComponentCache = requireCache();
     reactComponentCache({});
     expect(reactComponentCache).to.be.ok;
   });
 
   it("should cache components", () => {
+    const reactComponentCache = requireCache();
     let renderCount = 0;
     reactComponentCache({
       components: {"HelloWorld": function (props) {return props.text;}}});
@@ -51,7 +59,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept attributes to generate key", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
     reactComponentCache({
@@ -86,7 +94,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept deep attrs for key gen", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
     reactComponentCache({
@@ -124,7 +132,7 @@ describe("react-component-cache", function () {
   });
 
   it("should cache components only when key is not null", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
     let renderCount = 0;
     reactComponentCache({
       components: {
@@ -160,7 +168,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept custom LRU cache configurations", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     // Set maximum cache size to 1
     const cacheConfig = {
@@ -197,7 +205,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept template configurations", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
@@ -233,7 +241,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept template configurations with cache key attribute", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
@@ -276,7 +284,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept custom template configurations for deep attrs", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
@@ -312,7 +320,7 @@ describe("react-component-cache", function () {
 
   it("should templatize properly even when prop names overlap with '_'", () => {
     /*eslint-disable camelcase*/
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
@@ -345,7 +353,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept object attributes for templating", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
@@ -380,7 +388,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept array ref for templating", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     /* eslint-disable max-params, no-console*/
@@ -416,7 +424,7 @@ describe("react-component-cache", function () {
   });
 
   it("should accept a custom cache implementation", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     let getCount = 0;
@@ -469,7 +477,7 @@ describe("react-component-cache", function () {
   });
 
   it("should cache with react classes using displayName", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
     reactComponentCache({
       components: {"HelloDisplayName": function (props) {return props.text;}}});
     const React = require("react");
@@ -498,7 +506,7 @@ describe("react-component-cache", function () {
   });
 
   it("can be instantiated with caching disabled but later enabled and disabled again", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
 
     let renderCount = 0;
     const reactComponentCacheRef = reactComponentCache({
@@ -555,7 +563,7 @@ describe("react-component-cache", function () {
   });
 
   it("should expose cache functions to get length, reset and dump", () => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
     const reactComponentCacheRef = reactComponentCache({
       components: {"HelloDisplayName": function (props) {return props.text;}}});
     const React = require("react");
@@ -579,7 +587,7 @@ describe("react-component-cache", function () {
   });
 
   it("should expose callback to get notified of cache events", (done) => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
     const cacheStats = {
       hit: 0,
       miss: 0
@@ -619,7 +627,7 @@ describe("react-component-cache", function () {
   });
 
   it("should expose callback to get notified of cache events with load time", (done) => {
-    clearRequireCache();
+    const reactComponentCache = requireCache();
     const cacheStats = {
       hit: 0,
       miss: 0,
@@ -662,13 +670,132 @@ describe("react-component-cache", function () {
     });
   });
 
-  it("should not load in non-production", () => {
-    process.env.NODE_ENV = "test";
+  it("should not load in non-production by default", () => {
+    const reactComponentCache = requireCache("test");
     let log;
     const unhook = intercept((txt) => {
       log = txt;
     });
     reactComponentCache({});
+    unhook();
+    expect(log).to.be.ok;
+    expect(log).contains("Caching is disabled in non-production environments");
+  });
+
+  it("should load in a non-prod environment specified by a string", () => {
+    const reactComponentCache = requireCache("notproduction");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: "notproduction"
+    });
+    unhook();
+    expect(log).to.not.be.ok;
+  });
+
+  it("should load in a single not-prod environment", () => {
+    const reactComponentCache = requireCache("notproduction");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: ["notproduction"]
+    });
+    unhook();
+    expect(log).to.not.be.ok;
+  });
+
+  it("should load in production with a non-prod environment specified by a string", () => {
+    const reactComponentCache = requireCache("production");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: "notproduction"
+    });
+    unhook();
+    expect(log).to.not.be.ok;
+  });
+
+  it("should load in production with a single non-prod environment", () => {
+    const reactComponentCache = requireCache("production");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: ["notproduction"]
+    });
+    unhook();
+    expect(log).to.not.be.ok;
+  });
+
+  it("should load in production with multiple non-prod environments", () => {
+    const reactComponentCache = requireCache("production");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: ["notproduction", "alsonotproduction"]
+    });
+    unhook();
+    expect(log).to.not.be.ok;
+  });
+
+  it("should not load in non-production by default", () => {
+    const reactComponentCache = requireCache("notproduction");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({});
+    unhook();
+    expect(log).to.be.ok;
+    expect(log).contains("Caching is disabled in non-production environments");
+  });
+
+  it("should not load in unmatched non-production with a non-prod environment specified by a string", () => {
+    const reactComponentCache = requireCache("alsonotproduction");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: "notproduction"
+    });
+    unhook();
+    expect(log).to.be.ok;
+    expect(log).contains("Caching is disabled in non-production environments");
+  });
+
+  it("should not load in unmatched non-production with a single non-prod environment", () => {
+    const reactComponentCache = requireCache("alsonotproduction");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: ["notproduction"]
+    });
+    unhook();
+    expect(log).to.be.ok;
+    expect(log).contains("Caching is disabled in non-production environments");
+  });
+
+  it("should not load in unmatched non-production with multiple non-prod environments", () => {
+    const reactComponentCache = requireCache("reallynotproduction");
+    let log;
+    const unhook = intercept((txt) => {
+      log = txt;
+    });
+    reactComponentCache({
+      env: ["notproduction", "alsonotproduction"]
+    });
     unhook();
     expect(log).to.be.ok;
     expect(log).contains("Caching is disabled in non-production environments");
